@@ -1,20 +1,32 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import viteLogo from "/vite.svg";
-import "./App.css";
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import Login from './Components/Auth/Login';
+import Register from './Components/Auth/Register';
+import Dashboard from './Pages/Dashboard';
+import PrivateRoute from './Components/PrivateRoute';
+import './App.css';
 
 function App() {
-  const [count, setCount] = useState(0);
-  function handleClick() {
-    fetch("http://localhost:8000/", (req, res) => {
-      console.log(res);
-    });
-  }
-
   return (
-    <>
-      <button onClick={handleClick}>Check</button>
-    </>
+    <Router>
+      <AuthProvider>
+        <div className="app">
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route 
+              path="/dashboard/*" 
+              element={
+                <PrivateRoute>
+                  <Dashboard />
+                </PrivateRoute>
+              } 
+            />
+            <Route path="/" element={<Navigate to="/login" replace />} />
+          </Routes>
+        </div>
+      </AuthProvider>
+    </Router>
   );
 }
 
