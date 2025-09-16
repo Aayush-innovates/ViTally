@@ -26,7 +26,7 @@ api.interceptors.request.use(
 );
 
 // Get current user's profile
-const getDoctorProfile = async () => {
+const getCurrentUserProfile = async () => {
   try {
     const response = await api.get('/auth/me');
     
@@ -37,24 +37,20 @@ const getDoctorProfile = async () => {
     throw new Error('Invalid response format from server');
     
   } catch (error) {
-    console.error('Error in getDoctorProfile:', error);
-    
     if (error.response) {
-      // Server responded with error status
       if (error.response.status === 401) {
         throw new Error('Please log in to view your profile');
       }
       throw new Error(error.response.data?.error || 'Failed to fetch profile');
     } else if (error.request) {
-      // Request was made but no response received
       throw new Error('No response from server. Please check your connection.');
     } else {
-      // Error in request setup
       throw new Error('Error setting up the request: ' + error.message);
     }
   }
 };
 
 export default {
-  getDoctorProfile
+  getDoctorProfile: getCurrentUserProfile,
+  getCurrentUserProfile
 };
