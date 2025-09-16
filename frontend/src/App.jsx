@@ -10,7 +10,8 @@ import Register from "./Components/Auth/Register";
 import Dashboard from "./Pages/Dashboard";
 import PrivateRoute from "./Components/PrivateRoute";
 import GuestRoute from "./Components/GuestRoute";
-import PatientRequest from "./PatientRequest";
+import DonorProfile from "./Pages/DonorProfile";
+import DonorRespond from "./Pages/DonorRespond";
 import "./App.css";
 
 function App() {
@@ -23,19 +24,21 @@ function App() {
           <Route
             path="/dashboard/*"
             element={
-              <PrivateRoute>
+              <PrivateRoute allowedTypes={["doctor"]}>
                 <Dashboard />
               </PrivateRoute>
             }
           />
           <Route
-            path="/patient-request"
+            path="/profile"
             element={
-              <PrivateRoute allowedTypes={["doctor"]}>
-                <PatientRequest />
+              <PrivateRoute allowedTypes={["donor"]}>
+                <DonorProfile />
               </PrivateRoute>
             }
           />
+          <Route path="/donor/respond/:requestId" element={<DonorRespond />} />
+           
           <Route path="/" element={<Navigate to="/login" replace />} />
         </Routes>
       </AuthProvider>

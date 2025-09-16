@@ -41,7 +41,7 @@ const Login = () => {
 
       const result = await login(formData.email, formData.password, userType, coords);
       if (result.success) {
-        navigate(userType === 'doctor' ? '/patient-request' : '/dashboard');
+        navigate(userType === 'doctor' ? '/dashboard' : '/profile');
       } else {
         setError(result.error || "Login failed");
       }

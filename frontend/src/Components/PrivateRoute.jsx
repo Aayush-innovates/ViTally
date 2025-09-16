@@ -1,7 +1,7 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-const PrivateRoute = ({ children }) => {
+const PrivateRoute = ({ children, allowedTypes }) => {
   const { user, loading } = useAuth();
   const token = localStorage.getItem('token');
 
@@ -11,6 +11,10 @@ const PrivateRoute = ({ children }) => {
 
   if (!token) {
     // Redirect to login if not authenticated
+    return <Navigate to="/login" replace />;
+  }
+
+  if (allowedTypes && user && !allowedTypes.includes(user.userType)) {
     return <Navigate to="/login" replace />;
   }
 

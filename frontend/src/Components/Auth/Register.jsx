@@ -16,6 +16,7 @@ const Register = () => {
     userType: "donor",
     hospitalName: "",
     licenseNumber: "",
+    lastDonationDate: "",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -52,6 +53,18 @@ const Register = () => {
     setError("");
 
     try {
+      // Format last donation date to 'Month Date Year' (e.g., 'January 5 2025') for donors
+      let formattedLastDonationDate = '';
+      if (formData.userType === 'donor' && formData.lastDonationDate) {
+        const dateObj = new Date(formData.lastDonationDate);
+        if (!isNaN(dateObj.getTime())) {
+          const month = dateObj.toLocaleString('en-US', { month: 'long' });
+          const day = dateObj.getDate();
+          const year = dateObj.getFullYear();
+          formattedLastDonationDate = `${month} ${day} ${year}`;
+        }
+      }
+
       const userData = {
         name: formData.name,
         email: formData.email,
@@ -59,6 +72,7 @@ const Register = () => {
         phone: formData.phone,
         userType: formData.userType,
         bloodGroup: formData.bloodGroup,
+        ...(formData.userType === 'donor' && formattedLastDonationDate ? { lastDonationDate: formattedLastDonationDate } : {}),
         ...(formData.userType === 'donor' && geo ? { location: geo } : {}),
         ...(formData.userType === 'doctor' && {
           hospitalName: formData.hospitalName,
@@ -205,6 +219,21 @@ const Register = () => {
                 </select>
               </div>
             </div>
+
+            {formData.userType === 'donor' && (
+              <div className={styles.formGroup}>
+                <label>Last Donation Date</label>
+                <div className={styles.inputWithIcon}>
+                  <input
+                    type="date"
+                    name="lastDonationDate"
+                    value={formData.lastDonationDate}
+                    onChange={handleChange}
+                    placeholder="Select last donation date"
+                  />
+                </div>
+              </div>
+            )}
 
             {formData.userType === 'doctor' && (
               <>
