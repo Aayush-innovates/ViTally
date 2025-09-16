@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './PatientRequest.css';
+import { FiSmile } from 'react-icons/fi';
 
 const PatientRequest = () => {
   const navigate = useNavigate();
@@ -82,17 +83,34 @@ const PatientRequest = () => {
     }
   };
 
+  // Demo progress values (replace with realtime statuses later)
+  const steps = [
+    { key: 'submitted', label: 'Request submitted' },
+    { key: 'finding', label: 'Finding compatible donors' },
+    { key: 'sms', label: 'SMS sent to donors' },
+    { key: 'response', label: 'Response received' },
+    { key: 'details', label: 'Donor details ready' }
+  ];
+  const activeStep = 2; // zero-based, highlight first three as example
+
   return (
-    <div className="request-container">
-      <div className="request-header">
-        <h1>Emergency Blood Request</h1>
-        <p>Fill out the form below to submit a new request.</p>
-      </div>
-      
-      {error && <div className="error-message">{error}</div>}
-      
-      <form onSubmit={handleSubmit} className="request-form">
-        <div className="form-grid">
+    <div className="request-page">
+      <div className="request-wrapper">
+      <div className="request-left">
+        <div className="request-brand">
+          <span className="brand-icon"><FiSmile /></span>
+          <span className="brand-text">ViTally</span>
+        </div>
+        <div className="request-card">
+          <div className="request-header">
+            <h1>Emergency Blood Request</h1>
+            <p>Fill out the form below to submit a new request.</p>
+          </div>
+
+          {error && <div className="error-message">{error}</div>}
+
+          <form onSubmit={handleSubmit} className="request-form">
+            <div className="form-grid">
           <div className="form-group">
             <label htmlFor="patientName">Patient Name</label>
             <input
@@ -209,16 +227,49 @@ const PatientRequest = () => {
               rows="3"
             />
           </div> */}
-        </div>
+            </div>
 
-        <button 
-          type="submit" 
-          className="btn-submit"
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? 'Submitting...' : 'Submit Request'}
-        </button>
-      </form>
+            <button 
+              type="submit" 
+              className="btn-submit"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Submitting...' : 'Submit Request'}
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <div className="request-right">
+        <div className="request-card" style={{maxWidth: 520, width: '100%'}}>
+          <div className="request-header">
+            <h1>Request Progress</h1>
+            <p>Track your request status in real-time.</p>
+          </div>
+
+          <div className="progress-panel">
+            <div className="progress-track">
+              {steps.map((step, idx) => (
+                <div
+                  key={step.key}
+                  className={`progress-step ${idx < activeStep ? 'completed' : idx === activeStep ? 'active' : 'pending'}`}
+                >
+                  <div className="dot" />
+                  <div className="label">{step.label}</div>
+                </div>
+              ))}
+              <div className="progress-shimmer" />
+            </div>
+          </div>
+
+          {/* Placeholder donor details */}
+          <div style={{marginTop: '1.5rem', padding: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: 10, border: '1px solid rgba(255,255,255,0.06)'}}>
+            <div style={{fontWeight: 700, marginBottom: 8}}>Matched Donor</div>
+            <div style={{fontSize: 14, opacity: 0.8}}>Awaiting responses...</div>
+          </div>
+        </div>
+      </div>
+      </div>
     </div>
   );
 };

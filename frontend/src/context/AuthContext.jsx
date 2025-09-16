@@ -9,13 +9,28 @@ export const AuthProvider = ({ children }) => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check if user is logged in
     const token = localStorage.getItem('token');
-    if (token) {
-      // Verify token with backend
-      // fetchUserData();
-    }
-    setLoading(false);
+    const fetchUser = async () => {
+      try {
+        const res = await fetch('http://localhost:8000/api/auth/me', {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          credentials: 'include'
+        });
+        const data = await res.json();
+        if (res.ok && data?.data) {
+          setUser(data.data);
+        } else {
+          localStorage.removeItem('token');
+        }
+      } catch (e) {
+        localStorage.removeItem('token');
+      }
+      setLoading(false);
+    };
+    if (token) fetchUser(); else setLoading(false);
   }, []);
 
   const login = async (email, password, userType, location) => {
@@ -27,6 +42,7 @@ export const AuthProvider = ({ children }) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ email, password, userType, location }),
+        credentials: 'include'
       });
       
       const data = await response.json();
@@ -52,6 +68,7 @@ export const AuthProvider = ({ children }) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(userData),
+        credentials: 'include'
       });
 
       const data = await response.json();

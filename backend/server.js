@@ -10,6 +10,7 @@ import hpp from 'hpp';
 import morgan from 'morgan';
 import connectDB from './config/db.js';
 import authRoutes from './routes/auth.js';
+import doctorRoutes from './routes/doctors.js';
 
 // Load environment variables
 dotenv.config();
@@ -60,6 +61,7 @@ app.use(hpp());
 
 // Mount routers
 app.use('/api/auth', authRoutes);
+app.use('/api/doctors', doctorRoutes);
 
 // Test route
 app.get('/', (req, res) => {
