@@ -104,41 +104,28 @@ const Dashboard = () => {
       longitude: longitude
     };
 
-    // Try direct API call first, then your backend as proxy
-    const apiEndpoints = [
-      'https://blood-compatibility-model.onrender.com/get_donors',
-      'https://vitally-mcwz.onrender.com/api/donors' // Use your backend as proxy
-    ];
+    try {
+      console.log('Fetching compatible donors from backend proxy...');
+      
+      const response = await fetch('https://vitally-mcwz.onrender.com/api/donors', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData),
+        mode: 'cors',
+      });
 
-    for (let i = 0; i < apiEndpoints.length; i++) {
-      try {
-        console.log(`Trying donors API endpoint ${i + 1}:`, apiEndpoints[i]);
-        
-        const response = await fetch(apiEndpoints[i], {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(requestData),
-          mode: 'cors',
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const donors = await response.json();
-        console.log('Compatible donors received:', donors);
-        return donors;
-      } catch (err) {
-        console.error(`Donors API endpoint ${i + 1} failed:`, err);
-        
-        // If this is the last endpoint, throw the error
-        if (i === apiEndpoints.length - 1) {
-          throw err;
-        }
-        // Continue to next endpoint
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
+
+      const donors = await response.json();
+      console.log('Compatible donors received:', donors);
+      return donors;
+    } catch (err) {
+      console.error('Failed to fetch compatible donors:', err);
+      throw err; // Re-throw to be handled by calling function
     }
   };
 
@@ -155,7 +142,7 @@ const Dashboard = () => {
       const latitude = 19.0760; // You can get this from doctor's profile or geolocation
       const longitude = 72.8777;
       
-      // Call the blood compatibility API
+      // Call the blood compatibility API through backend proxy
       const compatibleDonors = await getCompatibleDonors(form.bloodGroup, latitude, longitude);
       
       // Create donor links with real data
@@ -177,32 +164,7 @@ const Dashboard = () => {
       setDonorLinks(links);
     } catch (err) {
       console.error('Failed to get compatible donors:', err);
-      
-      // Fallback: Create mock donors if API fails
-      console.log('Using fallback mock donors...');
-      const baseRequestId = Math.random().toString(36).slice(2, 10);
-      const mockDonors = [
-        { name: "John Smith", blood_group: form.bloodGroup, compatibility_score: 95.5, distance_km: 1.2, donor_id: 1 },
-        { name: "Sarah Johnson", blood_group: form.bloodGroup, compatibility_score: 88.3, distance_km: 2.5, donor_id: 2 },
-        { name: "Mike Wilson", blood_group: form.bloodGroup, compatibility_score: 82.1, distance_km: 3.8, donor_id: 3 }
-      ];
-      
-      const links = mockDonors.map((donor, i) => {
-        const donorId = `${baseRequestId}_${donor.donor_id}`;
-        return {
-          id: donorId,
-          link: `https://vi-tally.vercel.app/donor/respond/${donorId}`,
-          donorName: donor.name,
-          bloodGroup: donor.blood_group,
-          compatibilityScore: donor.compatibility_score,
-          distanceKm: donor.distance_km,
-          donorId: donor.donor_id,
-          status: 'pending'
-        };
-      });
-      
-      setDonorLinks(links);
-      setError('Using demo data - API temporarily unavailable');
+      setError('Unable to fetch compatible donors. Please try again.');
     }
   };
 
