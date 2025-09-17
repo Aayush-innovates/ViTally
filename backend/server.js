@@ -20,6 +20,17 @@ connectDB();
 
 const app = express();
 
+// ---------- FIXED CORS (must be before routes & security middlewares) ----------
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'https://vitally-frontend.onrender.com',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+}));
+
+// Handle preflight requests
+app.options('*', cors());
+
 // Body parser
 app.use(express.json());
 
@@ -31,35 +42,20 @@ if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
 
-// Enable CORS (allow common frontend dev ports)
-app.use(cors({
-  origin: [
-    process.env.FRONTEND_URL || 
-    'https://vitally-frontend.onrender.com'
-  ],
-  credentials: true
-}));
-
-// Sanitize data
+// Security middlewares
 app.use(mongoSanitize());
-
-// Set security headers
 app.use(helmet());
-
-// Prevent XSS attacks
 app.use(xss());
+app.use(hpp());
 
 // Rate limiting
 const limiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 mins
-  max: 100 // limit each IP to 100 requests per windowMs
+  max: 100
 });
 app.use(limiter);
 
-// Prevent http param pollution
-app.use(hpp());
-
-// Mount routers
+// ---------------- ROUTES ----------------
 app.use('/api/auth', authRoutes);
 app.use('/api/doctors', doctorRoutes);
 
@@ -80,15 +76,13 @@ app.use((err, req, res, next) => {
   });
 });
 
+// ---------------- SERVER ----------------
 const PORT = process.env.PORT || 3000;
-
 const server = app.listen(PORT, () => {
   console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
 });
 
-// Handle unhandled promise rejections
-process.on('unhandledRejection', (err, promise) => {
+process.on('unhandledRejection', (err) => {
   console.log(`Error: ${err.message}`);
-  // Close server & exit process
   server.close(() => process.exit(1));
 });
