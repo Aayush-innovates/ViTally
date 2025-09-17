@@ -41,7 +41,8 @@ const userSchema = new mongoose.Schema({
     default: ''
   },
   lastDonationDate: {
-    type: Date
+    type: String,
+    default: ''
   },
   // Doctor specific fields
   hospitalName: {

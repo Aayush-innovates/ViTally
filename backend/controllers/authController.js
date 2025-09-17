@@ -7,7 +7,7 @@ import jwt from 'jsonwebtoken';
 // @route   POST /api/auth/register
 // @access  Public
 export const register = asyncHandler(async (req, res, next) => {
-  const { name, email, password, phone, userType, bloodGroup, hospitalName, licenseNumber, location } = req.body;
+  const { name, email, password, phone, userType, bloodGroup, hospitalName, licenseNumber, location, lastDonationDate } = req.body;
 
   // Create user
   const user = await User.create({
@@ -17,6 +17,7 @@ export const register = asyncHandler(async (req, res, next) => {
     phone,
     userType,
     bloodGroup: userType === 'donor' ? bloodGroup : undefined,
+    lastDonationDate: userType === 'donor' ? (lastDonationDate || '') : undefined,
     hospitalName: userType === 'doctor' ? hospitalName : undefined,
     licenseNumber: userType === 'doctor' ? licenseNumber : undefined,
     ...(userType === 'donor' && location?.lat && location?.lng ? {
