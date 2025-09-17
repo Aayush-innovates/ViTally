@@ -1,0 +1,153 @@
+.donor-response-container {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  
+  .donor-response-card {
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    max-width: 600px;
+    width: 100%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+  }
+  
+  .header {
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+  
+  .header h1 {
+    color: #333;
+    margin-bottom: 1rem;
+  }
+  
+  .urgency-badge {
+    display: inline-block;
+    background: #ff4757;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 0.9rem;
+  }
+  
+  .patient-details, .donor-match {
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: #f8f9fa;
+    border-radius: 12px;
+  }
+  
+  .patient-details h2, .donor-match h2 {
+    color: #333;
+    margin-bottom: 1rem;
+    border-bottom: 2px solid #667eea;
+    padding-bottom: 0.5rem;
+  }
+  
+  .detail-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    padding: 0.5rem 0;
+  }
+  
+  .detail-row span:first-child {
+    font-weight: 600;
+    color: #555;
+  }
+  
+  .detail-row span:last-child {
+    color: #333;
+  }
+  
+  .action-section {
+    text-align: center;
+  }
+  
+  .action-section h2 {
+    color: #333;
+    margin-bottom: 0.5rem;
+  }
+  
+  .action-section p {
+    color: #666;
+    margin-bottom: 2rem;
+  }
+  
+  .action-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+  }
+  
+  .accept-btn, .decline-btn {
+    padding: 1rem 2rem;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 1rem;
+  }
+  
+  .accept-btn {
+    background: #2ed573;
+    color: white;
+  }
+  
+  .accept-btn:hover {
+    background: #26c261;
+    transform: translateY(-2px);
+  }
+  
+  .decline-btn {
+    background: #ff4757;
+    color: white;
+  }
+  
+  .decline-btn:hover {
+    background: #ff3838;
+    transform: translateY(-2px);
+  }
+  
+  .accept-btn:disabled, .decline-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+  
+  .success-message {
+    text-align: center;
+    background: white;
+    padding: 2rem;
+    border-radius: 16px;
+    max-width: 600px;
+  }
+  
+  .success-message h2 {
+    color: #2ed573;
+    margin-bottom: 1rem;
+  }
+  
+  .patient-info {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 12px;
+    margin-top: 2rem;
+    text-align: left;
+  }
+  
+  .loading, .error {
+    text-align: center;
+    color: white;
+    font-size: 1.2rem;
+    background: rgba(0, 0, 0, 0.1);
+    padding: 2rem;
+    border-radius: 12px;
+  }

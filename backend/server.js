@@ -12,6 +12,7 @@ import connectDB from './config/db.js';
 import authRoutes from './routes/auth.js';
 import doctorRoutes from './routes/doctors.js';
 import axios from 'axios';
+import bloodRequestRoutes from './routes/bloodRequests.js';
 
 // Load environment variables
 dotenv.config();
@@ -59,6 +60,7 @@ app.use(limiter);
 // ---------------- ROUTES ----------------
 app.use('/api/auth', authRoutes);
 app.use('/api/doctors', doctorRoutes);
+app.use('/api/blood-requests', bloodRequestRoutes);
 
 // Proxy endpoint to external blood compatibility API
 app.post('/api/donors', async (req, res) => {
