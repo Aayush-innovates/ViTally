@@ -16,6 +16,8 @@ import {
   FiPhone,
   FiMapPin,
   FiUser as FiProfile,
+  FiCopy,
+  FiCheck,
 } from "react-icons/fi";
 import "./Dashboard.css";
 import profileService from "../services/profileService";
@@ -38,8 +40,8 @@ const Dashboard = () => {
     'Fulfilled'
   ];
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
-  const [requestId, setRequestId] = useState(null);
-  const [donorAlertLink, setDonorAlertLink] = useState('');
+  const [donorLinks, setDonorLinks] = useState([]);
+  const [copiedIndex, setCopiedIndex] = useState(null);
   const [form, setForm] = useState({
     patientName: '',
     bloodGroup: '',
@@ -85,18 +87,123 @@ const Dashboard = () => {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
+  const copyToClipboard = async (text, index) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedIndex(index);
+      setTimeout(() => setCopiedIndex(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
+  const getCompatibleDonors = async (bloodGroup, latitude, longitude) => {
+    const requestData = {
+      blood_group: bloodGroup,
+      latitude: latitude,
+      longitude: longitude
+    };
+
+    // Try direct API call first, then your backend as proxy
+    const apiEndpoints = [
+      'https://blood-compatibility-model.onrender.com/get_donors',
+      'https://vitally-mcwz.onrender.com/api/donors' // Use your backend as proxy
+    ];
+
+    for (let i = 0; i < apiEndpoints.length; i++) {
+      try {
+        console.log(`Trying donors API endpoint ${i + 1}:`, apiEndpoints[i]);
+        
+        const response = await fetch(apiEndpoints[i], {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestData),
+          mode: 'cors',
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const donors = await response.json();
+        console.log('Compatible donors received:', donors);
+        return donors;
+      } catch (err) {
+        console.error(`Donors API endpoint ${i + 1} failed:`, err);
+        
+        // If this is the last endpoint, throw the error
+        if (i === apiEndpoints.length - 1) {
+          throw err;
+        }
+        // Continue to next endpoint
+      }
+    }
+  };
+
   const simulateFlow = async () => {
     // Step 0 -> Step 1: Hospital Request submitted
     setCurrentStepIndex(1);
+    
     // Step 1 -> Step 2: AI matching
     await new Promise(r => setTimeout(r, 800));
     setCurrentStepIndex(2);
-    // Step 2: Donor Alerts - create mock alert link with request id
-    const mockId = Math.random().toString(36).slice(2, 10);
-    setRequestId(mockId);
-    const link = `${window.location.origin}/donor/respond/${mockId}`;
-    setDonorAlertLink(link);
-    // Step 2 -> Step 3 awaits donor action; we stay here until response page posts back
+    
+    try {
+      // Get doctor's location (using Mumbai as default for demo)
+      const latitude = 19.0760; // You can get this from doctor's profile or geolocation
+      const longitude = 72.8777;
+      
+      // Call the blood compatibility API
+      const compatibleDonors = await getCompatibleDonors(form.bloodGroup, latitude, longitude);
+      
+      // Create donor links with real data
+      const baseRequestId = Math.random().toString(36).slice(2, 10);
+      const links = compatibleDonors.map((donor, i) => {
+        const donorId = `${baseRequestId}_${donor.donor_id}`;
+        return {
+          id: donorId,
+          link: `https://vi-tally.vercel.app/donor/respond/${donorId}`,
+          donorName: donor.name,
+          bloodGroup: donor.blood_group,
+          compatibilityScore: donor.compatibility_score,
+          distanceKm: donor.distance_km,
+          donorId: donor.donor_id,
+          status: 'pending'
+        };
+      });
+      
+      setDonorLinks(links);
+    } catch (err) {
+      console.error('Failed to get compatible donors:', err);
+      
+      // Fallback: Create mock donors if API fails
+      console.log('Using fallback mock donors...');
+      const baseRequestId = Math.random().toString(36).slice(2, 10);
+      const mockDonors = [
+        { name: "John Smith", blood_group: form.bloodGroup, compatibility_score: 95.5, distance_km: 1.2, donor_id: 1 },
+        { name: "Sarah Johnson", blood_group: form.bloodGroup, compatibility_score: 88.3, distance_km: 2.5, donor_id: 2 },
+        { name: "Mike Wilson", blood_group: form.bloodGroup, compatibility_score: 82.1, distance_km: 3.8, donor_id: 3 }
+      ];
+      
+      const links = mockDonors.map((donor, i) => {
+        const donorId = `${baseRequestId}_${donor.donor_id}`;
+        return {
+          id: donorId,
+          link: `https://vi-tally.vercel.app/donor/respond/${donorId}`,
+          donorName: donor.name,
+          bloodGroup: donor.blood_group,
+          compatibilityScore: donor.compatibility_score,
+          distanceKm: donor.distance_km,
+          donorId: donor.donor_id,
+          status: 'pending'
+        };
+      });
+      
+      setDonorLinks(links);
+      setError('Using demo data - API temporarily unavailable');
+    }
   };
 
   useEffect(() => {
@@ -105,22 +212,44 @@ const Dashboard = () => {
       if (e.key === 'donor_response') {
         try {
           const payload = JSON.parse(e.newValue || '{}');
-          if (payload.requestId === requestId) {
-            // Step 3 -> Step 4: Donor Response received -> Hospital Dashboard updates
-            setCurrentStepIndex(4);
-            // Simulate fulfillment after a short delay
-            setTimeout(() => setCurrentStepIndex(5), 900);
+          // Check if any of our donor links received a response
+          const matchingLink = donorLinks.find(link => link.id === payload.requestId);
+          if (matchingLink) {
+            // Update the specific donor's status
+            setDonorLinks(prev => prev.map(link => 
+              link.id === payload.requestId 
+                ? { ...link, status: payload.decision, respondedAt: payload.at }
+                : link
+            ));
+            
+            // If we have at least one acceptance, move to next step
+            const hasAcceptance = donorLinks.some(link => link.status === 'accepted') || payload.decision === 'accepted';
+            if (hasAcceptance && currentStepIndex === 2) {
+              setCurrentStepIndex(3);
+              // Simulate fulfillment after a short delay
+              setTimeout(() => setCurrentStepIndex(4), 900);
+              setTimeout(() => setCurrentStepIndex(5), 1800);
+            }
           }
         } catch {}
       }
     };
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);
-  }, [requestId]);
+  }, [donorLinks, currentStepIndex]);
 
   const onSubmitRequest = (e) => {
     e.preventDefault();
+    
+    // Validate required fields
+    if (!form.bloodGroup) {
+      setError('Please select a blood group');
+      return;
+    }
+    
+    setError(null);
     setCurrentStepIndex(0);
+    setDonorLinks([]);
     simulateFlow();
   };
 
@@ -210,7 +339,7 @@ const Dashboard = () => {
               <div className="form-group">
                 <div className="input-with-icon">
                   <FiDroplet className="input-icon" />
-                  <select className="form-input" name="bloodGroup" value={form.bloodGroup} onChange={onFormChange}>
+                  <select className="form-input" name="bloodGroup" value={form.bloodGroup} onChange={onFormChange} required>
                     <option value="">Select Blood Group</option>
                     <option value="A+">A+</option>
                     <option value="A-">A-</option>
@@ -261,15 +390,73 @@ const Dashboard = () => {
             </form>
           </div>
 
-          {donorAlertLink && (
+          {donorLinks.length > 0 && (
             <div className="dash-card">
-              <h3>Donor Alert Link</h3>
-              <p>Share this link with matched donors via SMS:</p>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <input className="form-input" style={{ flex: 1 }} value={donorAlertLink} readOnly />
-                <a className="submit-btn" href={donorAlertLink} target="_blank" rel="noreferrer">Open</a>
+              <h3>Matched Donors ({donorLinks.length} found)</h3>
+              <p>Share these unique links with matched donors via SMS:</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {donorLinks.map((donor, index) => (
+                  <div key={donor.id} style={{ 
+                    padding: 12, 
+                    border: '1px solid #e2e8f0', 
+                    borderRadius: 8,
+                    background: donor.status === 'accepted' ? '#f0fdf4' : 
+                               donor.status === 'declined' ? '#fef2f2' : '#f8fafc'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                      <div>
+                        <span style={{ fontWeight: 600 }}>{donor.donorName}</span>
+                        <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
+                          {donor.bloodGroup} • {donor.compatibilityScore.toFixed(1)}% match • {donor.distanceKm.toFixed(1)}km away
+                        </div>
+                      </div>
+                      <span style={{ 
+                        padding: '4px 8px', 
+                        borderRadius: 4, 
+                        fontSize: 12,
+                        background: donor.status === 'accepted' ? '#16a34a' : 
+                                   donor.status === 'declined' ? '#ef4444' : '#64748b',
+                        color: 'white'
+                      }}>
+                        {donor.status === 'accepted' ? 'ACCEPTED' : 
+                         donor.status === 'declined' ? 'DECLINED' : 'PENDING'}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <input 
+                        className="form-input" 
+                        style={{ flex: 1, fontSize: 12 }} 
+                        value={donor.link} 
+                        readOnly 
+                      />
+                      <button 
+                        className="submit-btn" 
+                        style={{ padding: '8px 12px', fontSize: 12 }}
+                        onClick={() => copyToClipboard(donor.link, index)}
+                      >
+                        {copiedIndex === index ? <FiCheck /> : <FiCopy />}
+                      </button>
+                      <a 
+                        className="submit-btn" 
+                        style={{ padding: '8px 12px', fontSize: 12 }}
+                        href={donor.link} 
+                        target="_blank" 
+                        rel="noreferrer"
+                      >
+                        Open
+                      </a>
+                    </div>
+                    {donor.respondedAt && (
+                      <p style={{ marginTop: 8, fontSize: 12, color: '#64748b' }}>
+                        Responded: {new Date(donor.respondedAt).toLocaleString()}
+                      </p>
+                    )}
+                  </div>
+                ))}
               </div>
-              <p style={{ marginTop: 8, color: '#64748b' }}>Waiting for donor response...</p>
+              <p style={{ marginTop: 12, color: '#64748b', fontSize: 14 }}>
+                Waiting for donor responses... ({donorLinks.filter(d => d.status === 'pending').length} pending)
+              </p>
             </div>
           )}
         </section>

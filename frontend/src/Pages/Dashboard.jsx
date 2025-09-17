@@ -392,53 +392,45 @@ const Dashboard = () => {
 
           {donorLinks.length > 0 && (
             <div className="dash-card">
-              <h3>Matched Donors ({donorLinks.length} found)</h3>
-              <p>Share these unique links with matched donors via SMS:</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <h3 className="donors-header">Matched Donors ({donorLinks.length} found)</h3>
+              <p className="donors-subtitle">Share these unique links with matched donors via SMS:</p>
+              <div className="donors-container">
                 {donorLinks.map((donor, index) => (
-                  <div key={donor.id} style={{ 
-                    padding: 12, 
-                    border: '1px solid #e2e8f0', 
-                    borderRadius: 8,
-                    background: donor.status === 'accepted' ? '#f0fdf4' : 
-                               donor.status === 'declined' ? '#fef2f2' : '#f8fafc'
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                      <div>
-                        <span style={{ fontWeight: 600 }}>{donor.donorName}</span>
-                        <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
-                          {donor.bloodGroup} • {donor.compatibilityScore.toFixed(1)}% match • {donor.distanceKm.toFixed(1)}km away
+                  <div key={donor.id} className={`donor-card ${donor.status}`}>
+                    <div className="donor-header">
+                      <div className="donor-info">
+                        <h4>{donor.donorName}</h4>
+                        <div className="donor-details">
+                          <div className="donor-detail-item">
+                            <span className="blood-group-badge">{donor.bloodGroup}</span>
+                          </div>
+                          <div className="donor-detail-item">
+                            <span>{donor.compatibilityScore.toFixed(1)}% match</span>
+                          </div>
+                          <div className="donor-detail-item">
+                            <span>{donor.distanceKm.toFixed(1)}km away</span>
+                          </div>
                         </div>
                       </div>
-                      <span style={{ 
-                        padding: '4px 8px', 
-                        borderRadius: 4, 
-                        fontSize: 12,
-                        background: donor.status === 'accepted' ? '#16a34a' : 
-                                   donor.status === 'declined' ? '#ef4444' : '#64748b',
-                        color: 'white'
-                      }}>
-                        {donor.status === 'accepted' ? 'ACCEPTED' : 
-                         donor.status === 'declined' ? 'DECLINED' : 'PENDING'}
+                      <span className={`donor-status-badge ${donor.status}`}>
+                        {donor.status === "accepted" ? "ACCEPTED" : 
+                         donor.status === "declined" ? "DECLINED" : "PENDING"}
                       </span>
                     </div>
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <div className="donor-actions">
                       <input 
-                        className="form-input" 
-                        style={{ flex: 1, fontSize: 12 }} 
+                        className="donor-link-input" 
                         value={donor.link} 
                         readOnly 
                       />
                       <button 
-                        className="submit-btn" 
-                        style={{ padding: '8px 12px', fontSize: 12 }}
+                        className={`donor-action-btn ${copiedIndex === index ? "copied" : ""}`}
                         onClick={() => copyToClipboard(donor.link, index)}
                       >
                         {copiedIndex === index ? <FiCheck /> : <FiCopy />}
                       </button>
                       <a 
-                        className="submit-btn" 
-                        style={{ padding: '8px 12px', fontSize: 12 }}
+                        className="donor-action-btn"
                         href={donor.link} 
                         target="_blank" 
                         rel="noreferrer"
@@ -447,16 +439,16 @@ const Dashboard = () => {
                       </a>
                     </div>
                     {donor.respondedAt && (
-                      <p style={{ marginTop: 8, fontSize: 12, color: '#64748b' }}>
+                      <div className="donor-response-time">
                         Responded: {new Date(donor.respondedAt).toLocaleString()}
-                      </p>
+                      </div>
                     )}
                   </div>
                 ))}
               </div>
-              <p style={{ marginTop: 12, color: '#64748b', fontSize: 14 }}>
-                Waiting for donor responses... ({donorLinks.filter(d => d.status === 'pending').length} pending)
-              </p>
+              <div className="waiting-indicator">
+                Waiting for donor responses... ({donorLinks.filter(d => d.status === "pending").length} pending)
+              </div>
             </div>
           )}
         </section>
