@@ -35,7 +35,7 @@ if (process.env.NODE_ENV === 'development') {
 app.use(cors({
   origin: [
     process.env.FRONTEND_URL || 
-    'https://vitally-frontend.onrender.com/'
+    'https://vitally-frontend.onrender.com'
   ],
   credentials: true
 }));
