@@ -22,66 +22,71 @@ import {
 import "./Dashboard.css";
 import profileService from "../services/profileService";
 import ProgressBar from "../Components/ProgressBar";
+import bloodRequestRoutes from './routes/bloodRequests.js';
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [doctorProfile, setDoctorProfile] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [form, setForm] = useState({
-    patientName: "",
-    bloodGroup: "",
-    unitsNeeded: "",
-    urgency: "Medium",
-  });
+  const [error, setError] = useState(null);
+
+  // Flow state
+  const steps = [
+    'Hospital Request',
+    'AI Matching',
+    'Donor Alerts',
+    'Donor Response',
+    'Hospital Dashboard',
+    'Fulfilled'
+  ];
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [donorLinks, setDonorLinks] = useState([]);
   const [copiedIndex, setCopiedIndex] = useState(null);
-  const [error, setError] = useState("");
+  const [form, setForm] = useState({
+    patientName: '',
+    bloodGroup: '',
+    units: 1,
+    priority: 'normal',
+    neededOn: ''
+  });
   const [currentRequestId, setCurrentRequestId] = useState(null);
 
-  const steps = [
-    "Hospital Request",
-    "AI Matching",
-    "Donor Alerts",
-    "Donor Response",
-    "Hospital Dashboard",
-    "Fulfilled",
-  ];
-
   useEffect(() => {
-    const fetchProfile = async () => {
+    const fetchDoctorProfile = async () => {
       try {
+        setLoading(true);
+        setError(null);
         console.log("Fetching doctor profile...");
-        const profile = await profileService.getCurrentUserProfile();
+        const profile = await profileService.getDoctorProfile();
         console.log("Profile data received:", profile);
         setDoctorProfile(profile);
-      } catch (error) {
-        console.error("Error fetching profile:", error);
+      } catch (err) {
+        console.error("Error in fetchDoctorProfile:", err);
+        setError(err.message || "Failed to load profile");
+
+        // If unauthorized, redirect to login
+        if (err.message.includes("401") || err.message.includes("token")) {
+          console.log("Authentication error, redirecting to login...");
+          logout();
+          navigate("/login");
+        }
       } finally {
         setLoading(false);
       }
     };
 
-    fetchProfile();
-  }, []);
+    fetchDoctorProfile();
+  }, [navigate, logout]);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!form.patientName || !form.bloodGroup || !form.unitsNeeded) {
-      setError("Please fill in all required fields");
-      return;
-    }
-    setError("");
-    simulateFlow();
+  const onFormChange = (e) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
   };
 
   const copyToClipboard = async (text, index) => {
@@ -90,7 +95,7 @@ const Dashboard = () => {
       setCopiedIndex(index);
       setTimeout(() => setCopiedIndex(null), 2000);
     } catch (err) {
-      console.error("Failed to copy:", err);
+      console.error('Failed to copy:', err);
     }
   };
 
@@ -149,7 +154,7 @@ const Dashboard = () => {
         patientName: form.patientName,
         bloodGroup: form.bloodGroup,
         unitsNeeded: form.unitsNeeded,
-        urgency: form.urgency,
+        urgency: form.priority, // Assuming priority maps to urgency
         donors: compatibleDonors
       };
 
@@ -251,189 +256,251 @@ const Dashboard = () => {
             // Update the specific donor's status
             setDonorLinks(prev => prev.map(link => 
               link.id === payload.requestId 
-                ? { ...link, status: payload.response }
+                ? { ...link, status: payload.decision, respondedAt: payload.at }
                 : link
             ));
             
-            // If accepted, move to fulfilled step
-            if (payload.response === 'accepted') {
-              setCurrentStepIndex(5);
+            // If we have at least one acceptance, move to next step
+            const hasAcceptance = donorLinks.some(link => link.status === 'accepted') || payload.decision === 'accepted';
+            if (hasAcceptance && currentStepIndex === 2) {
+              setCurrentStepIndex(3);
+              // Simulate fulfillment after a short delay
+              setTimeout(() => setCurrentStepIndex(4), 900);
+              setTimeout(() => setCurrentStepIndex(5), 1800);
             }
           }
-        } catch (err) {
-          console.error('Error processing donor response:', err);
-        }
+        } catch {}
       }
     };
-
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);
-  }, [donorLinks]);
+  }, [donorLinks, currentStepIndex]);
 
-  if (loading) {
-    return (
-      <div className="dash-page">
-        <div className="dash-main">
-          <div className="dash-card">
-            <div>Loading...</div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const onSubmitRequest = (e) => {
+    e.preventDefault();
+    
+    // Validate required fields
+    if (!form.bloodGroup) {
+      setError('Please select a blood group');
+      return;
+    }
+    
+    setError(null);
+    setCurrentStepIndex(0);
+    setDonorLinks([]);
+    simulateFlow();
+  };
 
   return (
     <div className="dash-page">
-      {/* Sidebar */}
-      <div className="dash-sidebar">
+      <aside className="dash-sidebar">
         <div className="dash-brand">
-          <FiDroplet className="dash-icon" />
+          <FiSmile className="dash-icon" />
           <span>ViTally</span>
         </div>
-        <nav className="dash-nav">
-          <Link to="/dashboard" className="dash-link">
-            <FiHome />
-            <span>Dashboard</span>
-          </Link>
-          <Link to="/patient-request" className="dash-link">
-            <FiFileText />
-            <span>Patient Request</span>
-          </Link>
-        </nav>
-        <button className="dash-logout" onClick={logout}>
-          <FiLogOut />
-          <span>Logout</span>
+        <button className="dash-logout" onClick={handleLogout}>
+          <FiLogOut /> Logout
         </button>
-      </div>
+      </aside>
 
-      {/* Main Content */}
-      <div className="dash-main">
-        <div className="dash-card">
-          <h1>Blood Donation Request</h1>
-          <p>Create a new blood donation request and find compatible donors</p>
-          
-          {error && <div className="error-message">{error}</div>}
-          
-          <form onSubmit={handleSubmit} className="request-form">
-            <div className="form-group">
-              <label>Patient Name *</label>
-              <input
-                type="text"
-                name="patientName"
-                value={form.patientName}
-                onChange={handleChange}
-                placeholder="Enter patient name"
-                required
-              />
-            </div>
-            
-            <div className="form-group">
-              <label>Blood Group *</label>
-              <select
-                name="bloodGroup"
-                value={form.bloodGroup}
-                onChange={handleChange}
-                required
-              >
-                <option value="">Select Blood Group</option>
-                <option value="A+">A+</option>
-                <option value="A-">A-</option>
-                <option value="B+">B+</option>
-                <option value="B-">B-</option>
-                <option value="AB+">AB+</option>
-                <option value="AB-">AB-</option>
-                <option value="O+">O+</option>
-                <option value="O-">O-</option>
-              </select>
-            </div>
-            
-            <div className="form-group">
-              <label>Units Needed *</label>
-              <input
-                type="number"
-                name="unitsNeeded"
-                value={form.unitsNeeded}
-                onChange={handleChange}
-                placeholder="Enter units needed"
-                min="1"
-                required
-              />
-            </div>
-            
-            <div className="form-group">
-              <label>Urgency Level</label>
-              <select
-                name="urgency"
-                value={form.urgency}
-                onChange={handleChange}
-              >
-                <option value="Low">Low</option>
-                <option value="Medium">Medium</option>
-                <option value="High">High</option>
-              </select>
-            </div>
-            
-            <button type="submit" className="submit-btn">
-              Create Blood Request
-            </button>
-          </form>
+      <main className="dash-main">
+        {/* Doctor Profile Section */}
+        <div className="dash-card profile-card">
+          {loading ? (
+            <div className="loading">Loading profile...</div>
+          ) : error ? (
+            <div className="error">{error}</div>
+          ) : doctorProfile ? (
+            <>
+              <div className="profile-header">
+                <div className="profile-avatar">
+                  <FiUser size={48} />
+                </div>
+                <div className="profile-info">
+                  <h2>Dr. {doctorProfile.name}</h2>
+                  <p className="profile-email">
+                    <FiMail /> {doctorProfile.email}
+                  </p>
+                  <p className="profile-specialty">
+                    <FiBriefcase />{" "}
+                    {doctorProfile.userType === "doctor" ? "Doctor" : "User"}
+                  </p>
+                </div>
+              </div>
+              <div className="profile-details">
+                {doctorProfile.phone && (
+                  <div className="detail-item">
+                    <FiPhoneOutgoing />
+                    <span>{doctorProfile.phone}</span>
+                  </div>
+                )}
+                {doctorProfile.hospitalName && (
+                  <div className="detail-item">
+                    <FiMapPin />
+                    <span>{doctorProfile.hospitalName}</span>
+                  </div>
+                )}
+                {doctorProfile.licenseNumber && (
+                  <div className="detail-item">
+                    <FiBriefcase />
+                    <span>License: {doctorProfile.licenseNumber}</span>
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <div className="error">No profile data available</div>
+          )}
         </div>
 
-        {/* Progress Bar */}
-        {currentStepIndex > 0 && (
-          <div className="dash-card">
-            <ProgressBar 
-              steps={steps} 
-              currentStepIndex={currentStepIndex} 
-            />
-          </div>
-        )}
+        {/* Progress Bar Section */}
+        <ProgressBar steps={steps} currentStepIndex={currentStepIndex} />
 
-        {/* Donor Links */}
-        {donorLinks.length > 0 && (
-          <div className="dash-card">
-            <h2>Matched Donors ({donorLinks.length} found)</h2>
-            <p>Share these unique links with matched donors via SMS:</p>
-            
-            <div className="donors-container">
-              {donorLinks.map((link, index) => (
-                <div key={link.id} className="donor-card">
-                  <div className="donor-info">
-                    <h3>{link.donorName}</h3>
-                    <p>{link.bloodGroup} • {link.compatibilityScore.toFixed(1)}% match • {link.distanceKm.toFixed(1)}km away</p>
-                  </div>
-                  <div className="donor-actions">
-                    <button
-                      onClick={() => copyToClipboard(link.link, index)}
-                      className="copy-btn"
-                    >
-                      {copiedIndex === index ? <FiCheck /> : <FiCopy />}
-                    </button>
-                    <a
-                      href={link.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="open-btn"
-                    >
-                      Open
-                    </a>
-                  </div>
-                  <div className={`donor-status ${link.status}`}>
-                    {link.status.toUpperCase()}
+        <section className="dash-grid">
+          <div className="dash-card request-form">
+            <h2>New Blood Request</h2>
+            <form className="dash-form" onSubmit={onSubmitRequest}>
+              <div className="form-group">
+                <div className="input-with-icon">
+                  <FiUser className="input-icon" />
+                  <input
+                    type="text"
+                    placeholder="Patient Name"
+                    className="form-input"
+                    name="patientName"
+                    value={form.patientName}
+                    onChange={onFormChange}
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <div className="input-with-icon">
+                  <FiDroplet className="input-icon" />
+                  <select className="form-input" name="bloodGroup" value={form.bloodGroup} onChange={onFormChange} required>
+                    <option value="">Select Blood Group</option>
+                    <option value="A+">A+</option>
+                    <option value="A-">A-</option>
+                    <option value="B+">B+</option>
+                    <option value="B-">B-</option>
+                    <option value="AB+">AB+</option>
+                    <option value="AB-">AB-</option>
+                    <option value="O+">O+</option>
+                    <option value="O-">O-</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <input
+                    type="number"
+                    placeholder="Units Required"
+                    className="form-input"
+                    min="1"
+                    name="units"
+                    value={form.units}
+                    onChange={onFormChange}
+                  />
+                </div>
+                <div className="form-group">
+                  <div className="input-with-icon">
+                    <FiAlertCircle className="input-icon" />
+                    <select className="form-input" name="priority" value={form.priority} onChange={onFormChange}>
+                      <option value="normal">Normal</option>
+                      <option value="urgent">Urgent</option>
+                      <option value="emergency">Emergency</option>
+                    </select>
                   </div>
                 </div>
-              ))}
-            </div>
-            
-            <div className="waiting-indicator">
-              Waiting for donor responses... ({donorLinks.filter(link => link.status === 'pending').length} pending)
-            </div>
+              </div>
+
+              <div className="form-group">
+                <div className="input-with-icon">
+                  <FiCalendar className="input-icon" />
+                  <input type="date" className="form-input" name="neededOn" value={form.neededOn} onChange={onFormChange} />
+                </div>
+              </div>
+
+              <button type="submit" className="submit-btn">
+                Submit Request
+              </button>
+            </form>
           </div>
-        )}
-      </div>
+
+          {donorLinks.length > 0 && (
+            <div className="dash-card">
+              <h3>Matched Donors ({donorLinks.length} found)</h3>
+              <p>Share these unique links with matched donors via SMS:</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {donorLinks.map((donor, index) => (
+                  <div key={donor.id} style={{ 
+                    padding: 12, 
+                    border: '1px solid #e2e8f0', 
+                    borderRadius: 8,
+                    background: donor.status === 'accepted' ? '#f0fdf4' : 
+                               donor.status === 'declined' ? '#fef2f2' : '#f8fafc'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                      <div>
+                        <span style={{ fontWeight: 600 }}>{donor.donorName}</span>
+                        <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
+                          {donor.bloodGroup} • {donor.compatibilityScore.toFixed(1)}% match • {donor.distanceKm.toFixed(1)}km away
+                        </div>
+                      </div>
+                      <span style={{ 
+                        padding: '4px 8px', 
+                        borderRadius: 4, 
+                        fontSize: 12,
+                        background: donor.status === 'accepted' ? '#16a34a' : 
+                                   donor.status === 'declined' ? '#ef4444' : '#64748b',
+                        color: 'white'
+                      }}>
+                        {donor.status === 'accepted' ? 'ACCEPTED' : 
+                         donor.status === 'declined' ? 'DECLINED' : 'PENDING'}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <input 
+                        className="form-input" 
+                        style={{ flex: 1, fontSize: 12 }} 
+                        value={donor.link} 
+                        readOnly 
+                      />
+                      <button 
+                        className="submit-btn" 
+                        style={{ padding: '8px 12px', fontSize: 12 }}
+                        onClick={() => copyToClipboard(donor.link, index)}
+                      >
+                        {copiedIndex === index ? <FiCheck /> : <FiCopy />}
+                      </button>
+                      <a 
+                        className="submit-btn" 
+                        style={{ padding: '8px 12px', fontSize: 12 }}
+                        href={donor.link} 
+                        target="_blank" 
+                        rel="noreferrer"
+                      >
+                        Open
+                      </a>
+                    </div>
+                    {donor.respondedAt && (
+                      <p style={{ marginTop: 8, fontSize: 12, color: '#64748b' }}>
+                        Responded: {new Date(donor.respondedAt).toLocaleString()}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <p style={{ marginTop: 12, color: '#64748b', fontSize: 14 }}>
+                Waiting for donor responses... ({donorLinks.filter(d => d.status === 'pending').length} pending)
+              </p>
+            </div>
+          )}
+        </section>
+      </main>
     </div>
   );
 };
 
 export default Dashboard;
-
