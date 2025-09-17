@@ -47,7 +47,7 @@ router.post('/create-request', protect, async (req, res) => {
       const donorResponse = {
         donorId: donor.donor_id.toString(),
         donorName: donor.name,
-        donorPhone: donor.phone || `+91${9000000000 + i}`, // Mock phone numbers for demo
+        donorPhone: donor.phone || `+91${8169342724 + i}`, // Using your phone number as base for demo
         bloodGroup: donor.blood_group,
         compatibilityScore: donor.compatibility_score,
         distanceKm: donor.distance_km,
@@ -63,15 +63,15 @@ router.post('/create-request', protect, async (req, res) => {
       // Add SMS sending promise
       const smsPromise = client.messages.create({
         body: smsMessage,
-        from: twilioPhoneNumber,
+        from: twilioPhoneNumber, // +16673270771
         to: donorResponse.donorPhone
       }).then(message => {
         donorResponse.smsStatus = 'sent';
         donorResponse.smsSid = message.sid;
-        console.log(`SMS sent to ${donor.name}: ${message.sid}`);
+        console.log(`SMS sent to ${donor.name} (${donorResponse.donorPhone}): ${message.sid}`);
       }).catch(error => {
         donorResponse.smsStatus = 'failed';
-        console.error(`SMS failed for ${donor.name}:`, error.message);
+        console.error(`SMS failed for ${donor.name} (${donorResponse.donorPhone}):`, error.message);
       });
 
       smsPromises.push(smsPromise);
