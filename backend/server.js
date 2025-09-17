@@ -11,6 +11,7 @@ import morgan from 'morgan';
 import connectDB from './config/db.js';
 import authRoutes from './routes/auth.js';
 import doctorRoutes from './routes/doctors.js';
+import axios from 'axios';
 
 // Load environment variables
 dotenv.config();
@@ -22,7 +23,7 @@ const app = express();
 
 // ---------- FIXED CORS (must be before routes & security middlewares) ----------
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'https://vitally-frontend.onrender.com',
+  origin: process.env.FRONTEND_URL || 'https://vi-tally.vercel.app',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
@@ -58,6 +59,22 @@ app.use(limiter);
 // ---------------- ROUTES ----------------
 app.use('/api/auth', authRoutes);
 app.use('/api/doctors', doctorRoutes);
+
+// Proxy endpoint to external blood compatibility API
+app.post('/api/donors', async (req, res) => {
+  try {
+    const response = await axios.post(
+      'https://blood-compatibility-model.onrender.com/get_donors',
+      req.body,
+      { headers: { 'Content-Type': 'application/json' }, timeout: 15000 }
+    );
+    return res.status(200).json(response.data);
+  } catch (error) {
+    const status = error.response?.status || 500;
+    const details = error.response?.data || { message: error.message };
+    return res.status(status).json({ success: false, error: 'Failed to fetch compatible donors', details });
+  }
+});
 
 // Test route
 app.get('/', (req, res) => {
