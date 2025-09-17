@@ -35,7 +35,7 @@ if (process.env.NODE_ENV === 'development') {
 app.use(cors({
   origin: [
     process.env.FRONTEND_URL || 'http://localhost:3000',
-    'http://localhost:5173'
+    'http://localhost:5174'
   ],
   credentials: true
 }));
@@ -80,7 +80,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-const PORT = process.env.PORT || 8000;
+const PORT = process.env.PORT || 3000;
 
 const server = app.listen(PORT, () => {
   console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);

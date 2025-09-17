@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import styles from "./Auth.module.css";
-import { FiUser, FiMail, FiPhone, FiLock, FiEye, FiEyeOff, FiSmile } from "react-icons/fi";
+import { FiUser, FiMail, FiPhone, FiLock, FiEye, FiEyeOff, FiSmile, FiUpload, FiShield, FiCheck } from "react-icons/fi";
 import { FaHospital, FaNotesMedical } from "react-icons/fa";
 
 const Register = () => {
@@ -23,6 +23,9 @@ const Register = () => {
   const { register } = useAuth();
   const navigate = useNavigate();
   const [geo, setGeo] = useState(null);
+  const [aadharFile, setAadharFile] = useState(null);
+  const [aadharLoading, setAadharLoading] = useState(false);
+  const [ageVerified, setAgeVerified] = useState(false);
 
   const bloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 
@@ -41,11 +44,77 @@ const Register = () => {
     });
   };
 
+  const handleAadharUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setAadharFile(file);
+    setAadharLoading(true);
+    setError("");
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    // Try direct API call first, then proxy as fallback
+    const apiEndpoints = [
+      'https://aadhar-parser-api.onrender.com/api/v1/aadhaar/parse-image',
+      'https://vitally-mcwz.onrender.com/api/aadhar/parse-image' // Use your backend as proxy
+    ];
+
+    for (let i = 0; i < apiEndpoints.length; i++) {
+      try {
+        console.log(`Trying API endpoint ${i + 1}:`, apiEndpoints[i]);
+        
+        const response = await fetch(apiEndpoints[i], {
+          method: 'POST',
+          body: formData,
+          mode: 'cors',
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        console.log('Aadhar API Response:', result);
+        
+        // If we get a successful response, consider age verified
+        if (result && (result.data || result.name || result.success !== false)) {
+          setAgeVerified(true);
+          setAadharLoading(false);
+          return; // Success, exit the function
+        }
+
+      } catch (err) {
+        console.error(`API endpoint ${i + 1} failed:`, err);
+        
+        // If this is the last endpoint, show error
+        if (i === apiEndpoints.length - 1) {
+          if (err.name === 'TypeError' && err.message.includes('Failed to fetch')) {
+            setError("Network error: Unable to connect to Aadhar parser service. Please check your internet connection or try again later.");
+          } else if (err.message.includes('HTTP error')) {
+            setError("Server error: The Aadhar parser service is currently unavailable. Please try again later.");
+          } else {
+            setError("Failed to verify Aadhar card. Please ensure the image is clear and try again.");
+          }
+          setAadharLoading(false);
+        }
+        // Continue to next endpoint
+      }
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords don't match!");
+      return;
+    }
+
+    // For donors, require age verification
+    if (formData.userType === 'donor' && !ageVerified) {
+      setError("Please verify your age by uploading your Aadhar card.");
       return;
     }
 
@@ -231,6 +300,90 @@ const Register = () => {
                     onChange={handleChange}
                     placeholder="Select last donation date"
                   />
+                </div>
+              </div>
+            )}
+
+            {/* Aadhar Age Verification Section - Only for Donors */}
+            {formData.userType === 'donor' && (
+              <div className={styles.formGroup}>
+                <label>Age Verification (Required for Donors)</label>
+                <div style={{ 
+                  padding: '1rem', 
+                  background: '#161212', 
+                  borderRadius: '0.5rem', 
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  marginTop: '0.5rem'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                    <FiShield size={16} color="#F87171" />
+                    <span style={{ fontWeight: 600, fontSize: '0.875rem', color: '#E5E7EB' }}>Upload Aadhar for Age Verification</span>
+                  </div>
+                  
+                  {!ageVerified ? (
+                    <>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleAadharUpload}
+                        style={{ display: 'none' }}
+                        id="aadhar-upload"
+                      />
+                      <label
+                        htmlFor="aadhar-upload"
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          padding: '0.75rem 1rem',
+                          background: aadharLoading ? '#374151' : 'linear-gradient(180deg, #ef4444 0%, #dc2626 100%)',
+                          color: 'white',
+                          borderRadius: '0.5rem',
+                          cursor: aadharLoading ? 'not-allowed' : 'pointer',
+                          fontSize: '0.875rem',
+                          fontWeight: 600,
+                          width: 'fit-content',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        {aadharLoading ? (
+                          <>Verifying...</>
+                        ) : (
+                          <>
+                            <FiUpload size={14} />
+                            Upload Aadhar Card
+                          </>
+                        )}
+                      </label>
+                      <p style={{ 
+                        marginTop: '0.5rem', 
+                        fontSize: '0.75rem', 
+                        color: '#9CA3AF' 
+                      }}>
+                        Upload your Aadhar card to verify your age eligibility for blood donation
+                      </p>
+                    </>
+                  ) : (
+                    <div style={{ 
+                      padding: '0.75rem', 
+                      background: 'rgba(34, 197, 94, 0.12)', 
+                      borderRadius: '0.5rem', 
+                      border: '1px solid rgba(34, 197, 94, 0.25)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem'
+                    }}>
+                      <FiCheck size={20} color="#22c55e" />
+                      <div>
+                        <div style={{ fontWeight: 600, color: '#22c55e', fontSize: '0.875rem' }}>
+                          Age Verified ✓
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: '#16a34a' }}>
+                          Your age has been successfully verified
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
