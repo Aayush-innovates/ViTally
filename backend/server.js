@@ -34,8 +34,8 @@ if (process.env.NODE_ENV === 'development') {
 // Enable CORS (allow common frontend dev ports)
 app.use(cors({
   origin: [
-    process.env.FRONTEND_URL || 'http://localhost:3000',
-    'http://localhost:5174'
+    process.env.FRONTEND_URL || 
+    'https://vitally-frontend.onrender.com/'
   ],
   credentials: true
 }));
