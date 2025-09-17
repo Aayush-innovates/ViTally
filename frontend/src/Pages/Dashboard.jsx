@@ -18,6 +18,7 @@ import {
   FiUser as FiProfile,
   FiCopy,
   FiCheck,
+  FiUsers,
 } from "react-icons/fi";
 import "./Dashboard.css";
 import profileService from "../services/profileService";
@@ -46,8 +47,8 @@ const Dashboard = () => {
   const [form, setForm] = useState({
     patientName: '',
     bloodGroup: '',
-    units: 1,
-    priority: 'normal',
+    unitsNeeded: 1, // Changed from 'units' to 'unitsNeeded'
+    urgency: 'normal', // Changed from 'priority' to 'urgency'
     neededOn: ''
   });
   const [currentRequestId, setCurrentRequestId] = useState(null);
@@ -154,7 +155,7 @@ const Dashboard = () => {
         patientName: form.patientName,
         bloodGroup: form.bloodGroup,
         unitsNeeded: form.unitsNeeded,
-        urgency: form.priority, // Assuming priority maps to urgency
+        urgency: form.urgency,
         donors: compatibleDonors
       };
 
@@ -184,7 +185,8 @@ const Dashboard = () => {
         distanceKm: donorResponse.distanceKm,
         donorId: donorResponse.donorId,
         status: donorResponse.status,
-        smsStatus: donorResponse.smsStatus
+        smsStatus: donorResponse.smsStatus,
+        smsSid: donorResponse.smsSid
       }));
       
       setDonorLinks(links);
@@ -374,10 +376,11 @@ const Dashboard = () => {
                 </div>
               </div>
 
+              {/* Update the form fields to match the backend expectations */}
               <div className="form-group">
                 <div className="input-with-icon">
                   <FiDroplet className="input-icon" />
-                  <select className="form-input" name="bloodGroup" value={form.bloodGroup} onChange={onFormChange} required>
+                  <select className="form-input" name="bloodGroup" value={form.bloodGroup} onChange={onFormChange}>
                     <option value="">Select Blood Group</option>
                     <option value="A+">A+</option>
                     <option value="A-">A-</option>
@@ -390,28 +393,28 @@ const Dashboard = () => {
                   </select>
                 </div>
               </div>
-
-              <div className="form-row">
-                <div className="form-group">
+              <div className="form-group">
+                <div className="input-with-icon">
+                  <FiUsers className="input-icon" />
                   <input
                     type="number"
-                    placeholder="Units Required"
                     className="form-input"
+                    placeholder="Units needed"
                     min="1"
-                    name="units"
-                    value={form.units}
+                    name="unitsNeeded" // Changed from 'units' to 'unitsNeeded'
+                    value={form.unitsNeeded} // Changed from 'units' to 'unitsNeeded'
                     onChange={onFormChange}
                   />
                 </div>
-                <div className="form-group">
-                  <div className="input-with-icon">
-                    <FiAlertCircle className="input-icon" />
-                    <select className="form-input" name="priority" value={form.priority} onChange={onFormChange}>
-                      <option value="normal">Normal</option>
-                      <option value="urgent">Urgent</option>
-                      <option value="emergency">Emergency</option>
-                    </select>
-                  </div>
+              </div>
+              <div className="form-group">
+                <div className="input-with-icon">
+                  <FiAlertCircle className="input-icon" />
+                  <select className="form-input" name="urgency" value={form.urgency} onChange={onFormChange}> {/* Changed from 'priority' to 'urgency' */}
+                    <option value="Low">Low</option>
+                    <option value="Medium">Medium</option>
+                    <option value="High">High</option>
+                  </select>
                 </div>
               </div>
 
@@ -431,35 +434,56 @@ const Dashboard = () => {
           {donorLinks.length > 0 && (
             <div className="dash-card">
               <h3>Matched Donors ({donorLinks.length} found)</h3>
-              <p>Share these unique links with matched donors via SMS:</p>
+              <p>SMS notifications sent to donors. Track their responses below:</p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 {donorLinks.map((donor, index) => (
                   <div key={donor.id} style={{ 
-                    padding: 12, 
+                    padding: 16, 
                     border: '1px solid #e2e8f0', 
-                    borderRadius: 8,
+                    borderRadius: 12,
                     background: donor.status === 'accepted' ? '#f0fdf4' : 
-                               donor.status === 'declined' ? '#fef2f2' : '#f8fafc'
+                       donor.status === 'declined' ? '#fef2f2' : '#f8fafc'
                   }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                       <div>
-                        <span style={{ fontWeight: 600 }}>{donor.donorName}</span>
-                        <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>
+                        <span style={{ fontWeight: 600, fontSize: 16 }}>{donor.donorName}</span>
+                        <div style={{ fontSize: 14, color: '#64748b', marginTop: 4 }}>
                           {donor.bloodGroup} • {donor.compatibilityScore.toFixed(1)}% match • {donor.distanceKm.toFixed(1)}km away
+                        </div>
+                        <div style={{ fontSize: 12, color: '#64748b', marginTop: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span>SMS Status:</span>
+                          <span style={{ 
+                            padding: '2px 6px', 
+                            borderRadius: 4, 
+                            fontSize: 10,
+                            background: donor.smsStatus === 'sent' ? '#16a34a' : 
+                                       donor.smsStatus === 'failed' ? '#ef4444' : '#f59e0b',
+                            color: 'white'
+                          }}>
+                            {donor.smsStatus === 'sent' ? '✓ SENT' : 
+                             donor.smsStatus === 'failed' ? '✗ FAILED' : '⏳ PENDING'}
+                          </span>
+                          {donor.smsSid && (
+                            <span style={{ fontSize: 10, color: '#9ca3af' }}>
+                              ID: {donor.smsSid.slice(-8)}
+                            </span>
+                          )}
                         </div>
                       </div>
                       <span style={{ 
-                        padding: '4px 8px', 
-                        borderRadius: 4, 
+                        padding: '6px 12px', 
+                        borderRadius: 6, 
                         fontSize: 12,
+                        fontWeight: 600,
                         background: donor.status === 'accepted' ? '#16a34a' : 
                                    donor.status === 'declined' ? '#ef4444' : '#64748b',
                         color: 'white'
                       }}>
-                        {donor.status === 'accepted' ? 'ACCEPTED' : 
-                         donor.status === 'declined' ? 'DECLINED' : 'PENDING'}
+                        {donor.status === 'accepted' ? '✅ ACCEPTED' : 
+                         donor.status === 'declined' ? '❌ DECLINED' : '⏳ PENDING'}
                       </span>
                     </div>
+                    
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                       <input 
                         className="form-input" 
@@ -484,6 +508,7 @@ const Dashboard = () => {
                         Open
                       </a>
                     </div>
+                    
                     {donor.respondedAt && (
                       <p style={{ marginTop: 8, fontSize: 12, color: '#64748b' }}>
                         Responded: {new Date(donor.respondedAt).toLocaleString()}
@@ -492,9 +517,19 @@ const Dashboard = () => {
                   </div>
                 ))}
               </div>
-              <p style={{ marginTop: 12, color: '#64748b', fontSize: 14 }}>
-                Waiting for donor responses... ({donorLinks.filter(d => d.status === 'pending').length} pending)
-              </p>
+              
+              <div style={{ marginTop: 16, padding: 12, background: '#f1f5f9', borderRadius: 8 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ color: '#64748b', fontSize: 14 }}>
+                    Waiting for donor responses... ({donorLinks.filter(d => d.status === 'pending').length} pending)
+                  </span>
+                  <div style={{ display: 'flex', gap: 16, fontSize: 12, color: '#64748b' }}>
+                    <span>✓ {donorLinks.filter(d => d.status === 'accepted').length} accepted</span>
+                    <span>❌ {donorLinks.filter(d => d.status === 'declined').length} declined</span>
+                    <span>⏳ {donorLinks.filter(d => d.status === 'pending').length} pending</span>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </section>
