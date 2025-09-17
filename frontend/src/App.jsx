@@ -12,6 +12,7 @@ import PrivateRoute from "./Components/PrivateRoute";
 import GuestRoute from "./Components/GuestRoute";
 import DonorProfile from "./Pages/DonorProfile";
 import DonorRespond from "./Pages/DonorRespond";
+import DonorResponse from './Pages/DonorResponse';
 import "./App.css";
 
 function App() {
@@ -37,7 +38,7 @@ function App() {
               </PrivateRoute>
             }
           />
-          <Route path="/donor/respond/:requestId" element={<DonorRespond />} />
+          <Route path="/donor/respond/:requestId/:token" element={<DonorResponse />} />
            
           <Route path="/" element={<Navigate to="/login" replace />} />
         </Routes>

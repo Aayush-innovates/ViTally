@@ -22,6 +22,7 @@ import {
 import "./Dashboard.css";
 import profileService from "../services/profileService";
 import ProgressBar from "../Components/ProgressBar";
+import bloodRequestRoutes from './routes/bloodRequests.js';
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
@@ -49,6 +50,7 @@ const Dashboard = () => {
     priority: 'normal',
     neededOn: ''
   });
+  const [currentRequestId, setCurrentRequestId] = useState(null);
 
   useEffect(() => {
     const fetchDoctorProfile = async () => {
@@ -139,33 +141,107 @@ const Dashboard = () => {
     
     try {
       // Get doctor's location (using Mumbai as default for demo)
-      const latitude = 19.0760; // You can get this from doctor's profile or geolocation
+      const latitude = 19.0760;
       const longitude = 72.8777;
       
       // Call the blood compatibility API through backend proxy
       const compatibleDonors = await getCompatibleDonors(form.bloodGroup, latitude, longitude);
       
-      // Create donor links with real data
-      const baseRequestId = Math.random().toString(36).slice(2, 10);
-      const links = compatibleDonors.map((donor, i) => {
-        const donorId = `${baseRequestId}_${donor.donor_id}`;
-        return {
-          id: donorId,
-          link: `https://vi-tally.vercel.app/donor/respond/${donorId}`,
-          donorName: donor.name,
-          bloodGroup: donor.blood_group,
-          compatibilityScore: donor.compatibility_score,
-          distanceKm: donor.distance_km,
-          donorId: donor.donor_id,
-          status: 'pending'
-        };
+      // Step 2 -> Step 3: Create blood request and send SMS
+      setCurrentStepIndex(3);
+      
+      const requestData = {
+        patientName: form.patientName,
+        bloodGroup: form.bloodGroup,
+        unitsNeeded: form.unitsNeeded,
+        urgency: form.priority, // Assuming priority maps to urgency
+        donors: compatibleDonors
+      };
+
+      const response = await fetch('https://vitally-mcwz.onrender.com/api/blood-requests/create-request', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify(requestData)
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to create blood request');
+      }
+
+      const result = await response.json();
+      const bloodRequest = result.data;
+
+      // Create donor links with real data from the blood request
+      const links = bloodRequest.donorResponses.map((donorResponse) => ({
+        id: donorResponse.donorId,
+        link: donorResponse.uniqueLink,
+        donorName: donorResponse.donorName,
+        bloodGroup: donorResponse.bloodGroup,
+        compatibilityScore: donorResponse.compatibilityScore,
+        distanceKm: donorResponse.distanceKm,
+        donorId: donorResponse.donorId,
+        status: donorResponse.status,
+        smsStatus: donorResponse.smsStatus
+      }));
       
       setDonorLinks(links);
+      setCurrentRequestId(bloodRequest.requestId);
+
+      // Step 3 -> Step 4: Waiting for responses
+      setCurrentStepIndex(4);
+
+      // Start polling for responses
+      startPollingForResponses(bloodRequest.requestId);
+
     } catch (err) {
       console.error('Failed to get compatible donors:', err);
       setError('Unable to fetch compatible donors. Please try again.');
     }
+  };
+
+  // Add polling function to check for donor responses
+  const startPollingForResponses = (requestId) => {
+    const pollInterval = setInterval(async () => {
+      try {
+        const response = await fetch(`https://vitally-mcwz.onrender.com/api/blood-requests/status/${requestId}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          const updatedLinks = result.data.donorResponses.map((donorResponse) => ({
+            id: donorResponse.donorId,
+            link: donorResponse.uniqueLink,
+            donorName: donorResponse.donorName,
+            bloodGroup: donorResponse.bloodGroup,
+            compatibilityScore: donorResponse.compatibilityScore,
+            distanceKm: donorResponse.distanceKm,
+            donorId: donorResponse.donorId,
+            status: donorResponse.status,
+            smsStatus: donorResponse.smsStatus
+          }));
+
+          setDonorLinks(updatedLinks);
+
+          // Check if any donor accepted
+          const acceptedDonor = updatedLinks.find(link => link.status === 'accepted');
+          if (acceptedDonor) {
+            setCurrentStepIndex(5); // Move to fulfilled step
+            clearInterval(pollInterval);
+          }
+        }
+      } catch (error) {
+        console.error('Error polling for responses:', error);
+      }
+    }, 5000); // Poll every 5 seconds
+
+    // Clear interval after 10 minutes
+    setTimeout(() => clearInterval(pollInterval), 600000);
   };
 
   useEffect(() => {
