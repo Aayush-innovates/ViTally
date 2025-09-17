@@ -5,9 +5,11 @@ import { protect } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// Twilio configuration
-const accountSid = 'AC1ea983056b04621ab3004bac9ef828ca';
-const authToken = 'ab28e76fd4ba32dbd720bdd722585802';
+// Twilio configuration from environment variables
+const accountSid = process.env.TWILIO_ACCOUNT_SID;
+const authToken = process.env.TWILIO_AUTH_TOKEN;
+const twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER;
+
 const client = twilio(accountSid, authToken);
 
 // Create blood request and send SMS to donors
@@ -61,7 +63,7 @@ router.post('/create-request', protect, async (req, res) => {
       // Add SMS sending promise
       const smsPromise = client.messages.create({
         body: smsMessage,
-        from: '+1234567890', // Your Twilio phone number
+        from: twilioPhoneNumber,
         to: donorResponse.donorPhone
       }).then(message => {
         donorResponse.smsStatus = 'sent';
