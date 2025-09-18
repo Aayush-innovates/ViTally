@@ -1,9 +1,8 @@
-
-https://vitally-frontend.onrender.com
-
 # 🩸 ViTally : Real-Time SOS Blood Donation Platform
 
 🚑 **Connecting Patients with Life-Saving Donors - Instantly, Intelligently, and Reliably.**
+
+Try our project live : **https://vitally-frontend.onrender.com**
 
 ---
 
