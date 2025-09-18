@@ -7,9 +7,10 @@
 ## 📌 Overview  
 
 In emergencies, **time = life**.  
-Our platform bridges the gap between patients in urgent need of blood and nearby compatible donors using **AI-powered donor matching**, **real-time alerts**, and a **frictionless confirmation flow**.  
+Our platform bridges the gap between patients in urgent need of blood and nearby compatible donors using **AI-powered donor matching**, **Aadhar Verification**.
 
 This project was built during a **24-hour hackathon**, designed to be lightweight, scalable, and impactful.  
+**NOTE : The SMS Blood Request messaging flow is yet to implement and is in development.**
 
 ---
 
@@ -65,7 +66,6 @@ This project was built during a **24-hour hackathon**, designed to be lightweigh
 - **Aadhar Parser:** Spring Boot
 - **Automation:** Python (Pandas, Flask, PyMongo)
 - **API Testing:** Postman  
-- **SMS/Alerts:** Twilio
 - **Deployment:** Render(frontend/backend + apis)
 ---
 
