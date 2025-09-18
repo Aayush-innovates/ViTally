@@ -35,7 +35,7 @@ This project was built during a **24-hour hackathon**, designed to be lightweigh
      - Proximity to hospital/patient  
      - Health eligibility  
 
-4. **Donor Alerts**  
+4. **Donor Alerts (NOTE: Not implemented yet)**  
    - Shortlisted donors instantly receive an **SMS notification**.  
    - Donors confirm availability via a simple link → “Do you accept this request?”  
 
@@ -51,9 +51,7 @@ This project was built during a **24-hour hackathon**, designed to be lightweigh
 - 🏥 **Hospital Request Form** - Raise urgent requests with ease.
 - 🔐 **Aadhar-based Age Verification** - Upload Aadhar Image and verify your age.
 - 🤖 **Rule-Based AI** - Fast, intelligent donor-patient matching.
-- 📍 **Radius-Based Shortlisting** - Alerts only nearby, eligible donors.  
-- 📲 **Frictionless Donor Flow** - No app needed; SMS with secure link.  
-- 📊 **Hospital Dashboard** - Track donor confirmations live.  
+- 📊 **Hospital Dashboard** - Send blood requests via a form and see nearby donors.  
 - 🔔 **Short-Message Alerts** - SMS Notifications.  
 - 🌟 **Smart Prioritization** - AI ranks donors by distance, eligibility, and reliability.  
 
